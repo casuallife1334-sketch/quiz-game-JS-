@@ -28,6 +28,7 @@ export default function GameBoard({ game, openQuestion, used = [], isHost, gameM
   const isQuestionLocked = (catIndex, qIndex) => {
     if (gameMode !== "training") return false;
     const key = `${catIndex}-${qIndex}`;
+    if (used.includes(key)) return false;
     return !unlockedQuestions.includes(key);
   };
 
@@ -76,7 +77,7 @@ export default function GameBoard({ game, openQuestion, used = [], isHost, gameM
               {questions.map((question, qIndex) => {
                 const key = `${catIndex}-${qIndex}`;
                 const isUsed = used.includes(key);
-                const isLocked = isQuestionLocked(catIndex, qIndex);
+                const isLocked = !isUsed && isQuestionLocked(catIndex, qIndex);
                 const label = getQuestionLabel(question, catIndex, question.price, qIndex);
 
                 return (

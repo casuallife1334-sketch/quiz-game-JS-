@@ -3,6 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
+import { buildChatMessage } from "./chatMessage.js";
 
 dotenv.config();
 
@@ -550,8 +551,12 @@ io.on("connection", (socket) => {
   socket.on("chat-message", (msg) => {
     const room = rooms[msg?.roomId];
     if (room && isRoomMember(room, socket.id)) {
-      // Отправляем сообщение всем в комнате включая отправителя
-      io.to(msg.roomId).emit("chat-message", msg);
+      const normalizedMessage = buildChatMessage(msg, room, socket.id);
+      if (!normalizedMessage) {
+        return;
+      }
+
+      io.to(msg.roomId).emit("chat-message", normalizedMessage);
     }
   });
 
