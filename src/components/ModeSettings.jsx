@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Trophy, BookOpen, Sparkles, Frown, Clock, ArrowRight, Zap } from "lucide-react";
+import { HOST_SIGNAL, isHostSignalDuration } from "../utils/trainingTiming";
 import "../styles/mode-settings.css";
 
 export default function ModeSettings({ gameMode, settings, onUpdateSettings }) {
@@ -13,6 +14,51 @@ export default function ModeSettings({ gameMode, settings, onUpdateSettings }) {
   const handleModeChange = (mode) => {
     setActiveTab(mode);
     onUpdateSettings({ ...settings, gameMode: mode });
+  };
+
+  const updateTrainingSetting = (field, value) =>
+    onUpdateSettings({
+      ...settings,
+      training: { ...settings.training, [field]: value },
+    });
+
+  const TimingModeControl = ({ field, label, hint, min, max, fallbackValue }) => {
+    const rawValue = settings.training?.[field];
+    const usesHostSignal = isHostSignalDuration(rawValue);
+    const numericValue = Number(rawValue);
+    const inputValue = !usesHostSignal && Number.isFinite(numericValue) && numericValue > 0
+      ? numericValue
+      : fallbackValue;
+
+    return (
+      <div className="setting-content">
+        <label>{label}</label>
+        <select
+          value={usesHostSignal ? HOST_SIGNAL : "timer"}
+          onChange={(e) => {
+            updateTrainingSetting(
+              field,
+              e.target.value === HOST_SIGNAL ? HOST_SIGNAL : inputValue
+            );
+          }}
+        >
+          <option value="timer">По таймеру</option>
+          <option value={HOST_SIGNAL}>По сигналу хоста</option>
+        </select>
+        {!usesHostSignal && (
+          <input
+            type="number"
+            min={min}
+            max={max}
+            value={inputValue}
+            onChange={(e) => updateTrainingSetting(field, Number(e.target.value))}
+          />
+        )}
+        <span className="setting-hint">
+          {usesHostSignal ? "Переход произойдет вручную ведущим" : hint}
+        </span>
+      </div>
+    );
   };
 
   // Параметры для режима "Своя игра"
@@ -189,22 +235,14 @@ export default function ModeSettings({ gameMode, settings, onUpdateSettings }) {
           <div className="setting-icon">
             <Clock size={20} strokeWidth={2} />
           </div>
-          <div className="setting-content">
-            <label>Время показа пояснения (сек)</label>
-            <input
-              type="number"
-              min={2}
-              max={30}
-              value={settings.training?.explanationTime || 5}
-              onChange={(e) =>
-                onUpdateSettings({
-                  ...settings,
-                  training: { ...settings.training, explanationTime: Number(e.target.value) },
-                })
-              }
-            />
-            <span className="setting-hint">Сколько показывать пояснение перед переходом</span>
-          </div>
+          <TimingModeControl
+            field="explanationTime"
+            label="Время показа пояснения"
+            hint="Сколько показывать пояснение перед переходом"
+            min={2}
+            max={30}
+            fallbackValue={5}
+          />
         </div>
 
         <div className="setting-card">
@@ -234,22 +272,14 @@ export default function ModeSettings({ gameMode, settings, onUpdateSettings }) {
           <div className="setting-icon">
             <Clock size={20} strokeWidth={2} />
           </div>
-          <div className="setting-content">
-            <label>Время показа ошибки (сек)</label>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={settings.training?.errorDisplayTime || 3}
-              onChange={(e) =>
-                onUpdateSettings({
-                  ...settings,
-                  training: { ...settings.training, errorDisplayTime: Number(e.target.value) },
-                })
-              }
-            />
-            <span className="setting-hint">Сколько показывать ошибку перед возвратом</span>
-          </div>
+          <TimingModeControl
+            field="errorDisplayTime"
+            label="Время показа ошибки"
+            hint="Сколько показывать результат перед переходом к пояснению"
+            min={1}
+            max={10}
+            fallbackValue={3}
+          />
         </div>
       </div>
     </div>

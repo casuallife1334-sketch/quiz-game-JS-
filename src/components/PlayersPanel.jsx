@@ -26,6 +26,7 @@ function getAvatarColor(id) {
 
 export default function PlayersPanel({ players, host, scores, isConnected, currentQuestion, gameMode }) {
   const [playerAnswers, setPlayerAnswers] = useState({});
+  const myId = socket.id;
 
   useEffect(() => {
     const handlePlayerAnswerSubmitted = (data) => {
@@ -56,7 +57,9 @@ export default function PlayersPanel({ players, host, scores, isConnected, curre
     };
   }, []);
 
-  const gamePlayers = (players || []).filter((p) => p.id !== host);
+  const allPlayers = players || [];
+  const currentPlayer = allPlayers.find((player) => player.id === myId) || null;
+  const gamePlayers = allPlayers.filter((p) => p.id !== host);
 
   if (gamePlayers.length === 0) {
     return (
@@ -77,56 +80,91 @@ export default function PlayersPanel({ players, host, scores, isConnected, curre
     ? Math.max(...sortedPlayers.map((p) => scores?.[p.id] || 0), 1)
     : 1;
 
+  const otherPlayers = sortedPlayers.filter((player) => player.id !== myId);
+
+  const renderPlayerCard = (player, index, extraClass = "") => {
+    const score = scores?.[player.id] || 0;
+    const avatarUrl = player.avatar && String(player.avatar).trim();
+    const displayName = player.name || "Игрок";
+    const percent = topScore > 0 ? (Math.max(0, score) / topScore) * 100 : 0;
+    const hasAnswer = !!playerAnswers[player.id];
+
+    return (
+      <div
+        key={player.id}
+        className={`pp-card ${index === 0 && score > 0 ? "leader" : ""} ${hasAnswer ? "answered" : ""} ${extraClass}`.trim()}
+      >
+        <div className="pp-card-inner">
+          <div className="pp-avatar-wrap">
+            <div
+              className="pp-avatar"
+              style={
+                !avatarUrl
+                  ? { backgroundColor: getAvatarColor(player.id) }
+                  : undefined
+              }
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={displayName} />
+              ) : (
+                getInitials(displayName)
+              )}
+            </div>
+          </div>
+
+          <div className="pp-info">
+            <span className="pp-name">{displayName}</span>
+            <span className={`pp-score ${score < 0 ? "negative" : ""}`}>
+              {score} очков
+            </span>
+          </div>
+
+          {score > 0 && (
+            <div className="pp-bar">
+              <div className="pp-bar-fill" style={{ width: `${percent}%` }} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="pp-root">
-      <div className="pp-list">
-        {sortedPlayers.map((player, index) => {
-          const score = scores?.[player.id] || 0;
-          const avatarUrl = player.avatar && String(player.avatar).trim();
-          const displayName = player.name || `Игрок`;
-          const percent = topScore > 0 ? (Math.max(0, score) / topScore) * 100 : 0;
-          const hasAnswer = !!playerAnswers[player.id];
-
-          return (
+      {currentPlayer && (
+        <div className="pp-current-player">
+          <div className="pp-current-label">Вы</div>
+          <div className="pp-current-card">
             <div
-              key={player.id}
-              className={`pp-card ${index === 0 && score > 0 ? "leader" : ""} ${hasAnswer ? "answered" : ""}`}
+              className="pp-current-avatar"
+              style={
+                currentPlayer.avatar
+                  ? undefined
+                  : { backgroundColor: getAvatarColor(currentPlayer.id) }
+              }
             >
-              <div className="pp-card-inner">
-                {/* Avatar */}
-                <div className="pp-avatar-wrap">
-                  <div
-                    className="pp-avatar"
-                    style={
-                      !avatarUrl
-                        ? { backgroundColor: getAvatarColor(player.id) }
-                        : undefined
-                    }
-                  >
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt={displayName} />
-                    ) : (
-                      getInitials(displayName)
-                    )}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="pp-info">
-                  <span className="pp-name">{displayName}</span>
-                  <span className={`pp-score ${score < 0 ? "negative" : ""}`}>{score} очков</span>
-                </div>
-
-                {/* Progress */}
-                {score > 0 && (
-                  <div className="pp-bar">
-                    <div className="pp-bar-fill" style={{ width: `${percent}%` }} />
-                  </div>
-                )}
+              {currentPlayer.avatar ? (
+                <img src={currentPlayer.avatar} alt={currentPlayer.name || "Вы"} />
+              ) : (
+                getInitials(currentPlayer.name || "Вы")
+              )}
+            </div>
+            <div className="pp-current-info">
+              <div className="pp-current-name">
+                {currentPlayer.name || "Вы"}
+              </div>
+              <div className="pp-current-meta">
+                {currentPlayer.id === host
+                  ? "Ведущий"
+                  : `${scores?.[currentPlayer.id] || 0} очков`}
               </div>
             </div>
-          );
-        })}
+          </div>
+        </div>
+      )}
+
+      <div className="pp-list">
+        {otherPlayers.map((player, index) => renderPlayerCard(player, index))}
       </div>
     </div>
   );

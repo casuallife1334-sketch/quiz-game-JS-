@@ -150,7 +150,8 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-.setting-content input[type="number"] {
+.setting-content input[type="number"],
+.setting-content select {
   width: 100%;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.06);
@@ -162,7 +163,12 @@
   transition: all 0.2s ease;
 }
 
-.setting-content input[type="number"]:focus {
+.setting-content select {
+  appearance: none;
+}
+
+.setting-content input[type="number"]:focus,
+.setting-content select:focus {
   outline: none;
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);

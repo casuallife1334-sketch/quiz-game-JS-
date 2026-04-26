@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { resolveImageUrl, getFallbackImage } from "../utils/imageUtils.js";
+import { migrateGame } from "../utils/gameMigration.js";
 import ModeSettings from "../components/ModeSettings";
+import { getTrainingDurationMs } from "../utils/trainingTiming";
 import "../styles/constructor.css";
 
 // Безопасное глубокое копирование
@@ -11,57 +13,6 @@ const safeClone = (obj) => {
     return JSON.parse(JSON.stringify(obj));
   }
 };
-
-// Миграция старой структуры
-  const migrateGame = (data) => {
-    if (!data || typeof data !== "object") {
-      return {
-        title: "Новая игра",
-        categories: [],
-        gameMode: "custom",
-        modeSettings: {
-          custom: { basePrice: 100, defaultTime: 30, scoreMultiplier: 1 },
-          training: {
-            showConfetti: true,
-            showSadEmoji: true,
-            autoAdvance: true,
-            explanationTime: 5,
-            confettiCount: 200,
-            errorDisplayTime: 3
-          }
-        }
-      };
-    }
-
-    return {
-      title: data.title || "Новая игра",
-      categories: (Array.isArray(data.categories) ? data.categories : []).map((cat) => ({
-        name: cat?.name || "Новый раздел",
-        questions: (Array.isArray(cat?.questions) ? cat.questions : []).map((q) => ({
-          situation: q?.situation || { title: "", description: "", image: "" },
-          question: q?.question || "",
-          questionImage: q?.questionImage || q?.image || "",
-          answer: q?.answer || "",
-          answerImage: q?.answerImage || "",
-          explanation: q?.explanation || { title: "", text: "", image: "" },
-          time: Number(q?.time) || 30,
-          price: Number(q?.price) || 100,
-        })),
-      })),
-      gameMode: data.gameMode || "custom",
-      modeSettings: data.modeSettings || {
-        custom: { basePrice: 100, defaultTime: 30, scoreMultiplier: 1 },
-        training: {
-          showConfetti: true,
-          showSadEmoji: true,
-          autoAdvance: true,
-          explanationTime: 5,
-          confettiCount: 200,
-          errorDisplayTime: 3
-        }
-      }
-    };
-  };
 
 export default function Constructor({ goBack, setGame: onGameReady }) {
   const [game, setGame] = useState(() => {
@@ -135,6 +86,10 @@ export default function Constructor({ goBack, setGame: onGameReady }) {
     const customSettings = modeSettings.custom || {};
     const trainingSettings = modeSettings.training || {};
     const isTraining = game.gameMode === "training";
+    const trainingQuestionTimeMs = getTrainingDurationMs(trainingSettings.explanationTime, 5);
+    const trainingQuestionTimeSeconds = trainingQuestionTimeMs === null
+      ? 5
+      : Math.round(trainingQuestionTimeMs / 1000);
 
     setGame((prev) => {
       const copy = safeClone(prev);
@@ -145,7 +100,7 @@ export default function Constructor({ goBack, setGame: onGameReady }) {
         answer: "",
         explanation: { title: "", text: "", image: "" },
         answerImage: "",
-        time: isTraining ? (trainingSettings.explanationTime || 5) : (customSettings.defaultTime || 30),
+        time: isTraining ? trainingQuestionTimeSeconds : (customSettings.defaultTime || 30),
         price: isTraining ? 0 : (customSettings.basePrice || 100),
       });
       return copy;
@@ -368,7 +323,10 @@ export default function Constructor({ goBack, setGame: onGameReady }) {
         {/* Правая панель — редактор выбранного вопроса */}
         <main className="editor glass">
           {currentQuestion ? (
-            <div className="question-form">
+            <div
+              key={`${selected?.cat}-${selected?.q}-${game.gameMode}`}
+              className="question-form"
+            >
               <div className="form-header">
                 <h2 className="form-title">Редактирование вопроса</h2>
                 <div className={`mode-badge ${game.gameMode}`}>

@@ -55,15 +55,40 @@ test("migrateGame normalizes legacy and partial question data", () => {
   });
 
   assert.deepEqual(result.categories[0].questions[1], {
-    situation: { title: "Case" },
+    situation: { title: "Case", description: "", image: "" },
     question: "Q",
     questionImage: "explicit.png",
     answer: "A",
     answerImage: "answer.png",
-    explanation: { text: "Because" },
+    explanation: { title: "", text: "Because", image: "" },
     time: 30,
     price: 100
   });
+});
+
+test("migrateGame creates independent nested objects for each question", () => {
+  const result = migrateGame({
+    categories: [
+      {
+        questions: [
+          {
+            situation: { title: "First", description: "One", image: "" },
+            explanation: { title: "Exp 1", text: "Alpha", image: "" }
+          },
+          {
+            situation: { title: "Second", description: "Two", image: "" },
+            explanation: { title: "Exp 2", text: "Beta", image: "" }
+          }
+        ]
+      }
+    ]
+  });
+
+  result.categories[0].questions[0].situation.title = "Changed";
+  result.categories[0].questions[0].explanation.text = "Changed text";
+
+  assert.equal(result.categories[0].questions[1].situation.title, "Second");
+  assert.equal(result.categories[0].questions[1].explanation.text, "Beta");
 });
 
 test("migrateGame falls back to empty arrays for invalid category lists", () => {
