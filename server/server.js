@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import { buildChatMessage } from "./chatMessage.js";
+import { buildReconnectPayload, buildGameStatePayload } from "./roomSync.js";
 
 dotenv.config();
 
@@ -101,11 +102,7 @@ function createRoomCode() {
 
 function getRoomState(room) {
   return {
-    players: room.players,
-    host: room.host,
-    game: room.game,
-    usedQuestions: room.usedQuestions,
-    scores: room.scores,
+    ...buildGameStatePayload(room),
     currentQuestion: room.currentQuestion
   };
 }
@@ -213,38 +210,19 @@ io.on("connection", (socket) => {
         host: room.host,
         roomId
       });
-      socket.emit("game-state", {
-        game: room.game,
-        usedQuestions: room.usedQuestions,
-        scores: room.scores,
-        players: room.players,
-        host: room.host,
-        gameMode: room.gameMode || "custom"
-      });
-
-      if (room.currentQuestion) {
-        socket.emit("question-selected", {
-          ...room.currentQuestion,
-          trainingState: room.trainingState
-        });
-        socket.emit("question-sync-state", {
-          attemptedPlayers: Object.keys(room.currentQuestion.attemptedAnswerers || {}),
-          activeAnswererId: room.currentQuestion.activeAnswererId,
-          stoppedTimeLeft: room.currentQuestion.stoppedTimeLeft,
-          timerPausedAt: room.currentQuestion.timerPausedAt
-        });
+      const reconnectPayload = buildReconnectPayload(room);
+      socket.emit("game-state", reconnectPayload.gameState);
+      if (reconnectPayload.questionSelected) {
+        socket.emit("question-selected", reconnectPayload.questionSelected);
       }
-
-      if (room.gameMode === "training" && room.trainingState) {
-        socket.emit("training-sync-state", room.trainingState);
+      if (reconnectPayload.questionSyncState) {
+        socket.emit("question-sync-state", reconnectPayload.questionSyncState);
       }
-
-      if (room.gameEnded) {
-        socket.emit("game-ended", {
-          scores: room.scores,
-          players: room.players,
-          gameMode: room.gameMode
-        });
+      if (reconnectPayload.trainingSyncState) {
+        socket.emit("training-sync-state", reconnectPayload.trainingSyncState);
+      }
+      if (reconnectPayload.gameEnded) {
+        socket.emit("game-ended", reconnectPayload.gameEnded);
       }
       return;
     }
@@ -278,37 +256,20 @@ io.on("connection", (socket) => {
     });
 
     // Если вопрос открыт - отправляем новому игроку
-    if (room.currentQuestion) {
-      socket.emit("question-selected", room.currentQuestion);
-
-      // Отправляем полное состояние ответов игроков для синхронизации
-      socket.emit("question-sync-state", {
-        attemptedPlayers: Object.keys(room.currentQuestion.attemptedAnswerers || {}),
-        activeAnswererId: room.currentQuestion.activeAnswererId,
-        stoppedTimeLeft: room.currentQuestion.stoppedTimeLeft,
-        timerPausedAt: room.currentQuestion.timerPausedAt
-      });
+    const reconnectPayload = buildReconnectPayload(room);
+    if (reconnectPayload.questionSelected) {
+      socket.emit("question-selected", reconnectPayload.questionSelected);
+      socket.emit("question-sync-state", reconnectPayload.questionSyncState);
       console.log(`[Room] Syncing question state to new player: ${socket.id}`);
-
-      // Если режим обучения и есть состояние - отправляем
-      if (room.gameMode === "training") {
-        console.log(`[Training] Join-room sync: gameMode=training, trainingState=${JSON.stringify(room.trainingState)}`);
-        if (room.trainingState) {
-          socket.emit("training-sync-state", room.trainingState);
-          console.log(`[Training] Syncing state to new player: slide ${room.trainingState.slide}, answers=${room.trainingState.playerAnswers?.length || 0}`);
-        } else {
-          console.log(`[Training] WARNING: trainingState is null for new player`);
-        }
-      }
+    }
+    if (reconnectPayload.trainingSyncState) {
+      console.log(`[Training] Join-room sync: gameMode=training, trainingState=${JSON.stringify(room.trainingState)}`);
+      socket.emit("training-sync-state", reconnectPayload.trainingSyncState);
+      console.log(`[Training] Syncing state to new player: slide ${room.trainingState.slide}, answers=${room.trainingState.playerAnswers?.length || 0}`);
     }
 
-    // Если игра завершена - отправляем новому игроку
-    if (room.gameEnded) {
-      socket.emit("game-ended", {
-        scores: room.scores,
-        players: room.players,
-        gameMode: room.gameMode
-      });
+    if (reconnectPayload.gameEnded) {
+      socket.emit("game-ended", reconnectPayload.gameEnded);
       console.log(`[Room] Syncing game-end to new player: ${socket.id}`);
     }
   });
@@ -319,41 +280,18 @@ io.on("connection", (socket) => {
       console.log(`[Room] ${socket.id} rejoining ${roomId}`);
       socket.join(roomId);
 
-      // Отправляем текущее состояние
       const room = rooms[roomId];
-      socket.emit("game-state", {
-        game: room.game,
-        usedQuestions: room.usedQuestions,
-        scores: room.scores,
-        players: room.players,
-        host: room.host,
-        gameMode: room.gameMode || "custom"
-      });
-
-      if (room.currentQuestion) {
-        socket.emit("question-selected", room.currentQuestion);
-
-        // Отправляем полное состояние ответов игроков для синхронизации
-        socket.emit("question-sync-state", {
-          attemptedPlayers: Object.keys(room.currentQuestion.attemptedAnswerers || {}),
-          activeAnswererId: room.currentQuestion.activeAnswererId,
-          stoppedTimeLeft: room.currentQuestion.stoppedTimeLeft,
-          timerPausedAt: room.currentQuestion.timerPausedAt
-        });
-
-        // Если режим обучения - отправляем состояние
-        if (room.gameMode === "training" && room.trainingState) {
-          socket.emit("training-sync-state", room.trainingState);
-        }
+      const reconnectPayload = buildReconnectPayload(room);
+      socket.emit("game-state", reconnectPayload.gameState);
+      if (reconnectPayload.questionSelected) {
+        socket.emit("question-selected", reconnectPayload.questionSelected);
+        socket.emit("question-sync-state", reconnectPayload.questionSyncState);
       }
-
-      // Если игра завершена - отправляем
-      if (room.gameEnded) {
-        socket.emit("game-ended", {
-          scores: room.scores,
-          players: room.players,
-          gameMode: room.gameMode
-        });
+      if (reconnectPayload.trainingSyncState) {
+        socket.emit("training-sync-state", reconnectPayload.trainingSyncState);
+      }
+      if (reconnectPayload.gameEnded) {
+        socket.emit("game-ended", reconnectPayload.gameEnded);
       }
     }
   });
@@ -364,34 +302,17 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
 
-    socket.emit("game-state", {
-      game: room.game,
-      usedQuestions: room.usedQuestions,
-      scores: room.scores,
-      players: room.players,
-      host: room.host,
-      gameMode: room.gameMode || "custom"
-    });
-
-    if (room.currentQuestion) {
-      socket.emit("question-selected", room.currentQuestion);
-
-      // Отправляем полное состояние ответов игроков для синхронизации
-      socket.emit("question-sync-state", {
-        attemptedPlayers: Object.keys(room.currentQuestion.attemptedAnswerers || {}),
-        activeAnswererId: room.currentQuestion.activeAnswererId,
-        stoppedTimeLeft: room.currentQuestion.stoppedTimeLeft,
-        timerPausedAt: room.currentQuestion.timerPausedAt
-      });
+    const reconnectPayload = buildReconnectPayload(room);
+    socket.emit("game-state", reconnectPayload.gameState);
+    if (reconnectPayload.questionSelected) {
+      socket.emit("question-selected", reconnectPayload.questionSelected);
+      socket.emit("question-sync-state", reconnectPayload.questionSyncState);
     }
-
-    // Если игра завершена - отправляем
-    if (room.gameEnded) {
-      socket.emit("game-ended", {
-        scores: room.scores,
-        players: room.players,
-        gameMode: room.gameMode
-      });
+    if (reconnectPayload.trainingSyncState) {
+      socket.emit("training-sync-state", reconnectPayload.trainingSyncState);
+    }
+    if (reconnectPayload.gameEnded) {
+      socket.emit("game-ended", reconnectPayload.gameEnded);
     }
   });
 

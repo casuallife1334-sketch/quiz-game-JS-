@@ -44,3 +44,24 @@ test("buildLeaderboard uses deterministic ordering for equal scores", () => {
     ]
   );
 });
+
+test("buildLeaderboard keeps every non-host participant, including players with zero scores", () => {
+  const result = buildLeaderboard(
+    [
+      { id: "host", name: "Host" },
+      { id: "p1", name: "Alice" },
+      { id: "p2", name: "Bob" },
+      { id: "p3", name: "Charlie" },
+      { id: "p4", name: "Dora" },
+      { id: "p5", name: "Eve" }
+    ],
+    { p1: 300, p2: 200, p3: 100, p4: 0, p5: 0 },
+    "host"
+  );
+
+  assert.equal(result.length, 5);
+  assert.deepEqual(
+    result.map(({ id }) => id),
+    ["p1", "p2", "p3", "p4", "p5"]
+  );
+});

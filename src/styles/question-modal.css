@@ -116,8 +116,11 @@
   margin: 0 0 18px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  width: fit-content;
+  background: transparent;
   max-width: 100%;
+  box-shadow: none;
 }
 
 .modal-image img {
@@ -125,6 +128,7 @@
   width: 100%;
   max-height: 280px;
   object-fit: cover;
+  background: transparent;
 }
 
 /* Timer */

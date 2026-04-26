@@ -4,6 +4,7 @@ import Confetti from "react-confetti";
 import { socket } from "../socket/socket";
 import { resolveImageUrl, getFallbackImage } from "../utils/imageUtils.js";
 import { useRoom } from "../context/RoomContext";
+import { getTrainingDurationMs } from "../utils/trainingTiming";
 import "../styles/slideshow-redesign.css";
 
 export default function Slideshow({ question, onClose, isHost, playerId, players, categoryIndex, price, trainingState: externalTrainingState, modeSettings = {}, game, gameMode, scores, usedQuestions }) {
@@ -25,9 +26,11 @@ export default function Slideshow({ question, onClose, isHost, playerId, players
   const showConfettiSetting = trainingSettings.showConfetti !== false;
   const showSadEmojiSetting = trainingSettings.showSadEmoji !== false;
   const autoAdvanceSetting = trainingSettings.autoAdvance !== false;
-  const explanationTimeSetting = trainingSettings.explanationTime || 5;
+  const explanationTimeSetting = trainingSettings.explanationTime ?? 5;
   const confettiCountSetting = trainingSettings.confettiCount || 200;
-  const errorDisplayTimeSetting = trainingSettings.errorDisplayTime || 3;
+  const errorDisplayTimeSetting = trainingSettings.errorDisplayTime ?? 3;
+  const explanationDurationMs = getTrainingDurationMs(explanationTimeSetting, 5);
+  const errorDisplayDurationMs = getTrainingDurationMs(errorDisplayTimeSetting, 3);
 
   const situation = question?.situation || { title: "", description: "", image: "" };
   const explanation = question?.explanation || { title: "", text: "", image: "" };
@@ -253,16 +256,16 @@ export default function Slideshow({ question, onClose, isHost, playerId, players
 
   // Автоматическое закрытие после показа пояснения
   useEffect(() => {
-    if (slide === 3 && autoAdvanceSetting) {
+    if (slide === 3 && autoAdvanceSetting && explanationDurationMs !== null) {
       const timer = setTimeout(() => {
         // Только ведущий закрывает вопрос для всех
         if (isHost) {
           handleCloseQuestion(playerAnswers.find(a => a.playerId === myId)?.isCorrect ? myId : null);
         }
-      }, explanationTimeSetting * 1000);
+      }, explanationDurationMs);
       return () => clearTimeout(timer);
     }
-  }, [slide, autoAdvanceSetting, explanationTimeSetting, playerAnswers, myId, isHost]);
+  }, [slide, autoAdvanceSetting, explanationDurationMs, playerAnswers, myId, isHost]);
 
 
 
@@ -271,15 +274,19 @@ export default function Slideshow({ question, onClose, isHost, playerId, players
     if (slide !== 2 || !isHost) return; // Только HOST
     if (!allPlayersAnswered) return;
 
+    if (errorDisplayDurationMs === null) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       setSlide(3);
       socket.emit("training-slide-change", {
         questionKey: `${categoryIndex}-${price}`,
         slide: 3
       });
-    }, 3000);
+    }, errorDisplayDurationMs);
     return () => clearTimeout(timer);
-  }, [slide, allPlayersAnswered, isHost, categoryIndex, price]);
+  }, [slide, allPlayersAnswered, isHost, categoryIndex, price, errorDisplayDurationMs]);
 
   // Когда все ответили И ведущий проверил все ответы — автоматически показываем результат ВСЕМ
   useEffect(() => {
@@ -630,8 +637,11 @@ export default function Slideshow({ question, onClose, isHost, playerId, players
                         key={answer.playerId}
                         className={`top-answer-item ${index === 0 ? "first-place" : ""} ${answer.playerId === myId ? "my-answer" : ""}`}
                       >
-                        <div className="top-rank">{index + 1}</div>
-                        <div className="top-player-info">
+                        <div className="top-rank-block">
+                          <div className="top-rank">{index + 1}</div>
+                          <div className="top-rank-label">место</div>
+                        </div>
+                        <div className="top-answer-mainline">
                           <span className="top-player-name">{answer.playerName}</span>
                           <span className="top-answer-text">{answer.answer}</span>
                         </div>
@@ -706,10 +716,12 @@ export default function Slideshow({ question, onClose, isHost, playerId, players
                     <span>Вопрос завершён!</span>
                   </div>
 
-                  <button className="next-question-btn" onClick={handleNextSlide}>
-                    <ChevronRight size={20} />
-                    <span>Следующий вопрос</span>
-                  </button>
+                  {isHost && (
+                    <button className="next-question-btn" onClick={handleNextSlide}>
+                      <ChevronRight size={20} />
+                      <span>Следующий вопрос</span>
+                    </button>
+                  )}
 
                   {!isHost && (
                     <p className="waiting-notice">Ожидайте ведущего...</p>

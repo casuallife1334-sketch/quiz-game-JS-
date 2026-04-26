@@ -134,6 +134,8 @@
 .intro-slide {
   text-align: center;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .intro-image-container {
@@ -141,7 +143,10 @@
   margin: 0 auto 2.8rem;
   border-radius: 26px;
   overflow: hidden;
-  box-shadow: 0 35px 70px -20px rgba(0, 0, 0, 0.75);
+  width: fit-content;
+  box-shadow: none;
+  background: transparent;
+  border: 0;
 }
 
 .intro-image { 
@@ -151,6 +156,7 @@
   object-fit: contain; 
   display: block; 
   border-radius: inherit;
+  background: transparent;
 }
 
 .intro-title {
@@ -418,14 +424,25 @@
 /* Слайд 3 — Пояснение */
 .explanation-slide {
   padding: 3.2rem 3.8rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.explanation-content {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
 }
 
 .explanation-image-container {
   margin-bottom: 2.8rem;
   border-radius: 20px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  width: fit-content;
+  max-width: 100%;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .explanation-image {
@@ -436,6 +453,7 @@
   object-fit: contain;
   object-position: center;
   border-radius: inherit;
+  background: transparent;
 }
 
 .explanation-title {

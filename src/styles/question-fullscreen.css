@@ -128,8 +128,11 @@
   margin: 0 0 20px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  width: fit-content;
+  background: transparent;
   max-width: 100%;
+  box-shadow: none;
 }
 
 .qfs-image img {
@@ -138,6 +141,7 @@
   height: auto;
   max-height: 60vh;
   object-fit: contain;
+  background: transparent;
 }
 
 /* Timer */

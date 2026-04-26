@@ -156,21 +156,20 @@ export default function GameEndScreen({ players, scores, game, gameMode, trainin
       <canvas ref={canvasRef} className="confetti-canvas" />
 
       {/* Заголовок */}
-      <div className={`game-end-header ${animationPhase >= 1 ? "fade-in-up" : ""}`}>
+      <div className={`game-end-header ${gameMode === "training" ? "training-mode" : ""} ${animationPhase >= 1 ? "fade-in-up" : ""}`}>
         <Star size={64} strokeWidth={2} className="header-star" />
         <h1 className="game-end-title">
           {gameMode === 'training' ? (
-            <>
-              Обучение завершено!
-              <br />
-              <small style={{ fontSize: '0.7em', opacity: 0.9, fontWeight: 400 }}>
-                {game?.title || 'Тема не указана'}
-              </small>
-            </>
+            'Обучение завершено!'
           ) : (
             'Игра завершена!'
           )}
         </h1>
+        {gameMode === "training" && (
+          <div className="game-end-theme">
+            {game?.title || "Тема не указана"}
+          </div>
+        )}
         {gameMode !== 'training' && (
           <p className="game-end-subtitle">Поздравляем победителей!</p>
         )}
@@ -208,82 +207,115 @@ export default function GameEndScreen({ players, scores, game, gameMode, trainin
 
       {/* Подиум топ-3 */}
       {topThree.length > 0 && (
-        <div className={`podium-container ${animationPhase >= 2 ? "fade-in-up" : ""}`}>
-          <div className="podium">
-            {/* 2 место (слева) */}
-            {topThree[1] && (
-              <div className="podium-place second">
-                <div className="podium-player">
-                  <div className="player-avatar-large">
-                    {getInitials(topThree[1].name)}
+        <div className={`podium-container ${gameMode === "training" ? "training-mode" : ""} ${animationPhase >= 2 ? "fade-in-up" : ""}`}>
+          {gameMode === "training" ? (
+            <div className="training-podium-list">
+              {topThree.map((player, index) => {
+                const place = index + 1;
+                const isWinner = place === 1;
+                return (
+                  <div
+                    key={player.id}
+                    className={`training-podium-card place-${place} ${isWinner ? "winner" : ""}`}
+                  >
+                    <div className="training-podium-rank">
+                      <div className="training-podium-medal">{getMedalIcon(place)}</div>
+                      <div className="training-podium-number">{place}</div>
+                    </div>
+                    <div className={`training-podium-avatar ${isWinner ? "winner" : ""}`}>
+                      {getInitials(player.name)}
+                    </div>
+                    <div className="training-podium-meta">
+                      <div className={`training-podium-name ${isWinner ? "winner" : ""}`}>
+                        {player.name || "Игрок"}
+                      </div>
+                      <div className={`training-podium-score ${isWinner ? "winner" : ""}`}>
+                        {player.score} очков
+                      </div>
+                    </div>
                   </div>
-                  <div className="player-name">{topThree[1].name || "Игрок"}</div>
-                  <div className="player-score">{topThree[1].score} очков</div>
-                </div>
-                <div className={`podium-block ${getPodiumHeight(2)}`}>
-                  <div className="podium-medal">
-                    {getMedalIcon(2)}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="podium">
+              {/* 2 место (слева) */}
+              {topThree[1] && (
+                <div className="podium-place second">
+                  <div className="podium-player">
+                    <div className="player-avatar-large">
+                      {getInitials(topThree[1].name)}
+                    </div>
+                    <div className="player-name">{topThree[1].name || "Игрок"}</div>
+                    <div className="player-score">{topThree[1].score} очков</div>
                   </div>
-                  <div className="podium-number">2</div>
+                  <div className={`podium-block ${getPodiumHeight(2)}`}>
+                    <div className="podium-medal">
+                      {getMedalIcon(2)}
+                    </div>
+                    <div className="podium-number">2</div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* 1 место (центр) */}
-            {topThree[0] && (
-              <div className="podium-place first">
-                <div className="podium-player">
-                  <div className="player-avatar-large winner">
-                    {getInitials(topThree[0].name)}
+              {/* 1 место (центр) */}
+              {topThree[0] && (
+                <div className="podium-place first">
+                  <div className="podium-player">
+                    <div className="player-avatar-large winner">
+                      {getInitials(topThree[0].name)}
+                    </div>
+                    <div className="player-name winner-name">{topThree[0].name || "Игрок"}</div>
+                    <div className="player-score winner-score">{topThree[0].score} очков</div>
                   </div>
-                  <div className="player-name winner-name">{topThree[0].name || "Игрок"}</div>
-                  <div className="player-score winner-score">{topThree[0].score} очков</div>
-                </div>
-                <div className={`podium-block ${getPodiumHeight(1)}`}>
-                  <div className="podium-medal">
-                    {getMedalIcon(1)}
+                  <div className={`podium-block ${getPodiumHeight(1)}`}>
+                    <div className="podium-medal">
+                      {getMedalIcon(1)}
+                    </div>
+                    <div className="podium-number">1</div>
                   </div>
-                  <div className="podium-number">1</div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* 3 место (справа) */}
-            {topThree[2] && (
-              <div className="podium-place third">
-                <div className="podium-player">
-                  <div className="player-avatar-large">
-                    {getInitials(topThree[2].name)}
+              {/* 3 место (справа) */}
+              {topThree[2] && (
+                <div className="podium-place third">
+                  <div className="podium-player">
+                    <div className="player-avatar-large">
+                      {getInitials(topThree[2].name)}
+                    </div>
+                    <div className="player-name">{topThree[2].name || "Игрок"}</div>
+                    <div className="player-score">{topThree[2].score} очков</div>
                   </div>
-                  <div className="player-name">{topThree[2].name || "Игрок"}</div>
-                  <div className="player-score">{topThree[2].score} очков</div>
-                </div>
-                <div className={`podium-block ${getPodiumHeight(3)}`}>
-                  <div className="podium-medal">
-                    {getMedalIcon(3)}
+                  <div className={`podium-block ${getPodiumHeight(3)}`}>
+                    <div className="podium-medal">
+                      {getMedalIcon(3)}
+                    </div>
+                    <div className="podium-number">3</div>
                   </div>
-                  <div className="podium-number">3</div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {gameMode !== 'training' && (
-        <>
-          {/* Все игроки */}
-          <div className={`all-players-section ${animationPhase >= 3 ? "fade-in-up" : ""}`}>
-            <h2 className="all-players-title">
-              <Trophy size={24} strokeWidth={2} />
-              Итоговая таблица
-            </h2>
+      {leaderboard.length > 0 && (
+        <div className={`all-players-section ${animationPhase >= 3 ? "fade-in-up" : ""}`}>
+          <h2 className="all-players-title">
+            <Trophy size={24} strokeWidth={2} />
+            {gameMode === "training" ? "Все участники" : "Все участники и итоговая таблица"}
+          </h2>
+          <div className="all-players-count">
+            Показано участников: {leaderboard.length}
+          </div>
+          <div className="results-list-shell">
+            <div className="results-list-header">
+              <span>Место</span>
+              <span>Игрок</span>
+              <span>Очки</span>
+            </div>
             <div className="results-list">
-              <div className="results-list-header">
-                <span>Место</span>
-                <span>Игрок</span>
-                <span>Очки</span>
-              </div>
               {leaderboard.map((player, index) => (
                 <div
                   key={player.id}
@@ -310,7 +342,7 @@ export default function GameEndScreen({ players, scores, game, gameMode, trainin
               ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Кнопка выхода */}
