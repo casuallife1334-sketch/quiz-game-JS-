@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile.server
     environment:
       PORT: 3001
-      CLIENT_URL: http://localhost:8080
+      CLIENT_URL: https://qwalyyyy.popovichab.ru
     expose:
-      - "3001"
+      - "127.0.0.1:3001:3001"
     restart: unless-stopped
 
   frontend:
@@ -15,7 +15,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
     restart: unless-stopped
